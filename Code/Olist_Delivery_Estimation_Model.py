@@ -232,3 +232,9 @@ print(evaluate(y_train, y_pred))
 y_pred_val = model.predict(X_val)
 print(evaluate(y_val, y_pred_val)) 
 # %%
+
+df["month"] = df["order_purchase_timestamp"].dt.month
+df["dow"]   = df["order_purchase_timestamp"].dt.dayofweek
+df["day"] = df["order_purchase_timestamp"].dt.day
+df["hour"]  = df["order_purchase_timestamp"].dt.hour
+# %%
