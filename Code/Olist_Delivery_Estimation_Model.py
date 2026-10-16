@@ -240,10 +240,9 @@ df["hour"]  = df["order_purchase_timestamp"].dt.hour
 # %%
 
 # for the Feature in the models:
+# fatema shaker use: 'customer_zip_code_prefix', 'seller_zip_code_prefix'
 
-# fatema shaker: 'customer_zip_code_prefix', 'seller_zip_code_prefix'
-
-# fatema mohamed:'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng', 'month', 'dow', 'hour', 'day'
+# fatema mohamed use:'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng', 'month', 'dow', 'hour', 'day'
 
 # both use: 'customer_state', 'seller_state', 'product_category_name_english', 'freight_value', 'product_weight_g', 'vol'
 # 'dist_km', 'quantity', 'same_state', 'same_state'
