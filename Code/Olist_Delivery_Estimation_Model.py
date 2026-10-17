@@ -243,15 +243,6 @@ print(evaluate(y_val, y_pred_val))
 joblib.dump(model, 'delivery_model.joblib')   # or `stack`, whichever model you pick
 columns = list(model.feature_names_in_)
 columns
-# %%
-
-# for the Feature in the models:
-# fatema shaker use: 'customer_zip_code_prefix', 'seller_zip_code_prefix'
-
-# fatema mohamed use:'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng'
-
-# both use: 'customer_state', 'seller_state', 'product_category_name_english', 'freight_value', 'product_weight_g', 'vol', 'month', 'dow', 'hour', 'day'
-# 'dist_km', 'quantity', 'same_state', 'same_state'
 
 # %%
 df = pd.read_csv('olist_clean.csv')
