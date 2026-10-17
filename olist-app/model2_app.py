@@ -177,7 +177,7 @@ st.session_state.setdefault('step', 0)           # the app starts from the first
 cart = st.session_state.setdefault('cart', {})   # everything the customer chose so far
 step = st.session_state.step
 
-st.title("📦 Find The Fastest Seller")
+st.title("📦 Olist Smart Shop")
 st.progress((step + 1) / len(STEPS))
 st.caption(" › ".join(f"**{name}**" if i == step else name for i, name in enumerate(STEPS)))
 
