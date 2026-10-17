@@ -16,6 +16,9 @@ from sklearn.preprocessing import FunctionTransformer, OneHotEncoder ,  Standard
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import RandomizedSearchCV
+from xgboost import XGBRegressor
+from sklearn.base import clone
+
 
 # %% reading nessesary files 
 # Read the data sets
