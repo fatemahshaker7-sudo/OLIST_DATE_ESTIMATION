@@ -332,7 +332,7 @@ models = {
     'LinearRegression': lr_pipe,
     'HistGradientBoosting': model,
     'RandomForest': rf_pipe,
-    # 'XGB': xgb_pipe,
+    'XGBoost': model_xgboost,
 }
 
 # 2. train every model and record its train and test MAE
@@ -374,4 +374,5 @@ print(evaluate(y_train, y_pred_xgboost))
 # %%
 y_pred_val_xgboost = model_xgboost.predict(X_val)
 print(evaluate(y_val, y_pred_val_xgboost)) 
+# %%
 
