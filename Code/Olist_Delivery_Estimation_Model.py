@@ -13,6 +13,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder ,  StandardScaler ,  OrdinalEncoder 
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import RandomizedSearchCV
 
 # %% reading nessesary files 
 # Read the data sets
@@ -264,3 +267,58 @@ offers = df.groupby(['product_category_name_english', 'seller_id_new']).agg(
     vol=('vol', 'median'),
 ).reset_index().dropna(subset=['seller_lat', 'seller_lng'])
 offers.to_csv('app_offers.csv', index=False)
+
+# # ----------------------------------------------------------------------------------------------
+# # Base model and the forest tree model
+
+# X = df[['customer_state', 'seller_state', 'product_category_name_english',
+#         'freight_value', 'product_weight_g', 'vol', 'dist_km', 'quantity', 'same_state',
+#         'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng',
+#         'month', 'dow', 'day', 'hour']]
+
+# y = df['delivery_days']
+
+# X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
+
+# num_cols = ['freight_value', 'product_weight_g', 'vol', 'dist_km', 'quantity', 'same_state',
+#             'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng',
+#             'month', 'dow', 'day', 'hour']
+
+# cat_cols = ['customer_state', 'seller_state', 'product_category_name_english']
+
+# num_pipe = make_pipeline(SimpleImputer(strategy='median'), StandardScaler())
+# cat_pipe = make_pipeline(SimpleImputer(strategy='most_frequent'),
+#                          OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=np.nan))
+
+# preprocessing_pipe = ColumnTransformer([
+#     ('num', num_pipe, num_cols),
+#     ('cat', cat_pipe, cat_cols),
+# ])
+# preprocessing_pipe
+
+# rf_pipe = make_pipeline(preprocessing_pipe, RandomForestRegressor(random_state=42))
+
+# #stepname__param
+# param_grid = {'randomforestregressor__n_estimators': [50, 100],
+#               'randomforestregressor__max_depth': [10, 15, 20],
+#               'randomforestregressor__min_samples_leaf': [1, 5, 10]}
+
+# random_grid_model = RandomizedSearchCV(rf_pipe, param_grid, n_iter=4, random_state=42)
+# random_grid_model.fit(X_train, y_train)
+
+# best_pipe = random_grid_model.best_estimator_
+
+# y_pred = best_pipe.predict(X_train);    evaluate(y_train, y_pred)
+# y_pred_val = best_pipe.predict(X_val);  evaluate(y_val, y_pred_val)
+
+# y_pred_test = best_pipe.predict(X_test)
+# evaluate(y_test, y_pred_test)
+
+# # This is the base model
+
+# lr_pipe = make_pipeline(preprocessing_pipe, LinearRegression())
+# lr_pipe.fit(X_train, y_train)
+
+# y_pred = lr_pipe.predict(X_train);    print(evaluate(y_train, y_pred))
+# y_pred_val = lr_pipe.predict(X_val);  print(evaluate(y_val, y_pred_val))
