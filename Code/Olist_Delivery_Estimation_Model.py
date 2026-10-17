@@ -36,7 +36,7 @@ print('category_translation:', category_translation.shape)
 # Spcify the cols we actually need from each dataset
 orders_sel = orders[['order_id', 'customer_id', 'order_status', 'order_purchase_timestamp', 'order_delivered_customer_date']]
 customers_sel = customers[['customer_id', 'customer_state', 'customer_zip_code_prefix']]
-order_items_sel = order_items[['order_id', 'product_id', 'seller_id', 'freight_value']]
+order_items_sel = order_items[['order_id', 'product_id', 'seller_id', 'freight_value', 'price']]
 sellers_sel = sellers[['seller_id', 'seller_state', 'seller_zip_code_prefix']]
 products_sel = products[['product_id', 'product_category_name', 'product_weight_g',
                          'product_length_cm', 'product_height_cm', 'product_width_cm']]
@@ -199,9 +199,16 @@ for col in ['customer_state', 'seller_state', 'product_category_name_english', '
     sns.boxplot(data=df, x=col, y='delivery_days', showfliers=False)
     plt.xticks(rotation=90)
     plt.show()
+
+# %%
+
+df["month"] = df["order_purchase_timestamp"].dt.month
+df["dow"]   = df["order_purchase_timestamp"].dt.dayofweek
+df["day"] = df["order_purchase_timestamp"].dt.day
+df["hour"]  = df["order_purchase_timestamp"].dt.hour
 # %% model features and split
 
-X = df[[ 'customer_zip_code_prefix', 'freight_value','seller_state', 'customer_state' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'product_category_name_english', 'quantity']]
+X = df[[ 'customer_zip_code_prefix', 'freight_value','seller_state', 'customer_state' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'product_category_name_english', 'quantity' ,"month", "dow", "day", "hour"]]
 y = df['delivery_days']
 
 X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -217,9 +224,9 @@ preprocess = ColumnTransformer(
 
 model = Pipeline([
     ('prep', preprocess),
-    ('hgb', HistGradientBoostingRegressor(
+    ('hgb', HistGradientBoostingRegressor( l2_regularization=5.91, max_depth=12, min_samples_leaf=71,  learning_rate=0.05, max_iter=200, max_leaf_nodes=95, max_features=0.7,
         categorical_features=[True] * len(['customer_state', 'seller_state', 'product_category_name_english']) 
-        + [False] * len([ 'customer_zip_code_prefix', 'freight_value' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'quantity']),
+        + [False] * len([ 'customer_zip_code_prefix', 'freight_value' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'quantity',"month", "dow", "day", "hour"]),
         random_state=42
     ))
 ])
@@ -231,18 +238,17 @@ print(evaluate(y_train, y_pred))
 # %%
 y_pred_val = model.predict(X_val)
 print(evaluate(y_val, y_pred_val)) 
-# %%
 
-df["month"] = df["order_purchase_timestamp"].dt.month
-df["dow"]   = df["order_purchase_timestamp"].dt.dayofweek
-df["day"] = df["order_purchase_timestamp"].dt.day
-df["hour"]  = df["order_purchase_timestamp"].dt.hour
+# %% saving the model
+joblib.dump(model, 'delivery_model.joblib')   # or `stack`, whichever model you pick
+columns = list(model.feature_names_in_)
+columns
 # %%
 
 # for the Feature in the models:
 # fatema shaker use: 'customer_zip_code_prefix', 'seller_zip_code_prefix'
 
-# fatema mohamed use:'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng', 'month', 'dow', 'hour', 'day'
+# fatema mohamed use:'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng'
 
-# both use: 'customer_state', 'seller_state', 'product_category_name_english', 'freight_value', 'product_weight_g', 'vol'
+# both use: 'customer_state', 'seller_state', 'product_category_name_english', 'freight_value', 'product_weight_g', 'vol', 'month', 'dow', 'hour', 'day'
 # 'dist_km', 'quantity', 'same_state', 'same_state'
