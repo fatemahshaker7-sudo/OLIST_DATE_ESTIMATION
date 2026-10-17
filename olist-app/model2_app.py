@@ -31,7 +31,7 @@ def predict_delivery_days(sellers, zip_code, quantity):
     customer = customers.loc[zip_code]
     now = datetime.datetime.now()
 
-    # we need this for the model to work (one row per seller)
+    # the inputs the model was trained on (one row per seller)
     features = pd.DataFrame({
         # information about the seller
         'seller_state': sellers['seller_state'],
@@ -39,15 +39,14 @@ def predict_delivery_days(sellers, zip_code, quantity):
         'product_category_name_english': sellers['product_category_name_english'],
         'product_weight_g': sellers['product_weight_g'],
         'vol': sellers['vol'],
-        'freight_value': sellers['freight_value'],
+        'freight_value': sellers['freight_value'],  # used by the model only, never shown
 
         # information about the customer (the same for every seller)
         'customer_state': customer['customer_state'],
         'customer_zip_code_prefix': zip_code,
 
         # information about the trip between them
-        'dist_km': distance_km(customer['customer_lat'], customer['customer_lng'],
-                               sellers['seller_lat'], sellers['seller_lng']),
+        'dist_km': distance_km(customer['customer_lat'], customer['customer_lng'], sellers['seller_lat'], sellers['seller_lng']),
         'same_state': (sellers['seller_state'] == customer['customer_state']).astype(int),
 
         # information about the order
@@ -113,12 +112,12 @@ def sellers_step():
     low = sellers['price_min'].round().astype(int).astype(str)
     high = sellers['price_max'].round().astype(int).astype(str)
     sellers['price'] = np.where(low == high, low, low + ' - ' + high)
-
+    # seller table and allow one selection only
     st.subheader(f"{len(sellers)} sellers for {cart['category']}")
-    table = sellers[['seller_id_new', 'price', 'products', 'freight_value', 'days', 'arrival']].round(2)
-    table.columns = ['Seller', 'Price range', 'Products', 'Shipping cost', 'Delivery (days)', 'Arrives by']
+    table = sellers[['seller_id_new', 'price', 'products', 'days', 'arrival']]
+    table.columns = ['Seller', 'Price range (R$)', 'Products', 'Delivery (days)', 'Arrives by']
     event = st.dataframe(table, hide_index=True, on_select="rerun", selection_mode="single-row")
-
+    # save the selection for the next step
     selected_rows = event.selection.rows
     seller = sellers.iloc[selected_rows[0]] if selected_rows else None
 
@@ -143,16 +142,13 @@ def sellers_step():
 def checkout_step():
     """Step 3: review the order and pay."""
     seller, quantity = cart['seller'], cart['quantity']
-
     st.subheader("Order summary")
     st.write(f"**{seller['seller_id_new']}** · {cart['category']} × {quantity}")
     st.write(f"Deliver to zip code {cart['zip_code']}, {cart['state']}")
     st.write(f"Estimated arrival: **{cart['arrival']}** (~{cart['days']} days)")
-    st.write(f"Shipping: R$ {seller['freight_value']:.2f}")
-    total = seller['price_min'] * quantity + seller['freight_value']
+    total = seller['price_min'] * quantity
     st.markdown(f"### Total from R$ {total:,.2f}")
     st.radio("Payment method", ["Credit Card", "Debit Card", "Pay Pal"], horizontal=True)
-
     if nav_buttons("Place order", back_step=2):
         cart['order_id'] = random.randint(100000, 999999)
         go_to_step(4)
@@ -162,8 +158,7 @@ def confirmation_step():
     seller = cart['seller']
     st.balloons()
     st.success(f"Your order #{cart['order_id']} has been placed")
-    st.write(f"{cart['quantity']} item(s) from **{seller['seller_id_new']}** · "
-             f"arrives by **{cart['arrival']}**")
+    st.write(f"{cart['quantity']} item(s) from **{seller['seller_id_new']}** · "f"arrives by **{cart['arrival']}**")
     st.markdown("✅ Order placed → 🕒 Preparing → 🚚 Shipped → 📦 Delivered")
     if st.button("Start a new order", type="primary"):
         cart.clear()
@@ -172,13 +167,10 @@ def confirmation_step():
 # Main app: load everything, draw the progress bar, run the current step
 model = load_model()
 customers, offers = load_data()
-
 st.session_state.setdefault('step', 0)           # the app starts from the first page
 cart = st.session_state.setdefault('cart', {})   # everything the customer chose so far
 step = st.session_state.step
-
 st.title("📦 Olist Smart Shop")
 st.progress((step + 1) / len(STEPS))
 st.caption(" › ".join(f"**{name}**" if i == step else name for i, name in enumerate(STEPS)))
-
 [location_step, shop_step, sellers_step, checkout_step, confirmation_step][step]()
