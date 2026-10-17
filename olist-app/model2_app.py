@@ -3,7 +3,9 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
+BASE = Path(__file__).parent
 
 def sine_km(lat1, lng1, lat2, lng2):
     lat1, lng1, lat2, lng2 = map(np.radians, [lat1, lng1, lat2, lng2])
@@ -13,20 +15,14 @@ def sine_km(lat1, lng1, lat2, lng2):
 
 @st.cache_resource
 def load_model():
-    return joblib.load('delivery_model.joblib')
+    return joblib.load(BASE / 'delivery_model.joblib')
 
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv('olist_clean.csv')
-
-    # location of every customer zip code
-    customers = df.drop_duplicates('customer_zip_code_prefix').set_index('customer_zip_code_prefix')
-    customers = customers[['customer_state', 'customer_lat', 'customer_lng']].dropna()
-
-    # one row for each seller in each category
-    customers = pd.read_csv('app_customers.csv', index_col=0)
-    offers = pd.read_csv('app_offers.csv')
+   
+    customers = pd.read_csv(BASE / 'app_customers.csv', index_col=0)
+    offers = pd.read_csv(BASE / 'app_offers.csv')
     return customers, offers
 
 
