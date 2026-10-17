@@ -32,7 +32,9 @@ model = load_model()
 customers, offers = load_data()
 # inputs (the user should select from select boxes)
 category = st.selectbox("Product category", sorted(offers['product_category_name_english'].unique()))
-zip_code = st.selectbox("Your zip code", sorted(customers.index))
+state = st.selectbox("Your state", sorted(customers['customer_state'].unique()))
+zip_codes = sorted(customers[customers['customer_state'] == state].index)
+zip_code = st.selectbox("Your zip code", zip_codes)
 quantity = st.number_input("Quantity", min_value=1, max_value=50, value=1)
 # look for the zip code chosen in the csv and take the datetime of now
 cust = customers.loc[zip_code]
