@@ -252,3 +252,24 @@ columns
 
 # both use: 'customer_state', 'seller_state', 'product_category_name_english', 'freight_value', 'product_weight_g', 'vol', 'month', 'dow', 'hour', 'day'
 # 'dist_km', 'quantity', 'same_state', 'same_state'
+
+# %%
+df = pd.read_csv('olist_clean.csv')
+
+customers = df.drop_duplicates('customer_zip_code_prefix').set_index('customer_zip_code_prefix')
+customers = customers[['customer_state', 'customer_lat', 'customer_lng']].dropna()
+customers.to_csv('app_customers.csv')
+
+offers = df.groupby(['product_category_name_english', 'seller_id_new']).agg(
+    seller_state=('seller_state', 'first'),
+    seller_zip_code_prefix=('seller_zip_code_prefix', 'first'),
+    seller_lat=('seller_lat', 'first'),
+    seller_lng=('seller_lng', 'first'),
+    price_min=('price', 'min'),
+    price_max=('price', 'max'),
+    products=('product_id', 'nunique'),
+    freight_value=('freight_value', 'median'),
+    product_weight_g=('product_weight_g', 'median'),
+    vol=('vol', 'median'),
+).reset_index().dropna(subset=['seller_lat', 'seller_lng'])
+offers.to_csv('app_offers.csv', index=False)
