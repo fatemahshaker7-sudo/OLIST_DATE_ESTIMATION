@@ -147,7 +147,7 @@ def checkout_step():
     st.write(f"Deliver to zip code {cart['zip_code']}, {cart['state']}")
     st.write(f"Estimated arrival: **{cart['arrival']}** (~{cart['days']} days)")
     total = seller['price_min'] * quantity
-    st.markdown(f"### Total from R$ {total:,.2f}")
+    st.markdown(f"### Total R$ {total:,.2f}")
     st.radio("Payment method", ["Credit Card", "Debit Card", "Pay Pal"], horizontal=True)
     if nav_buttons("Place order", back_step=2):
         cart['order_id'] = random.randint(100000, 999999)
