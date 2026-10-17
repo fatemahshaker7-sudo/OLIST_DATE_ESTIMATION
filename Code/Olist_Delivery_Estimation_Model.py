@@ -355,3 +355,23 @@ plt.xticks(rotation=45)
 plt.ylabel('MAE (days)')
 plt.tight_layout()
 plt.show()
+
+
+# %% XGBoost Model 
+model_xgboost = Pipeline([
+    ('prep', preprocess),
+     ('xgb', XGBRegressor( n_estimators=500, learning_rate=0.05, max_depth=6, subsample=0.8, colsample_bytree=0.8,
+        tree_method='hist', random_state=42,
+    ))
+])
+
+model_xgboost
+
+# %% Fit XGBoost Model and Predict
+model_xgboost.fit(X_train, y_train)
+y_pred_xgboost = model_xgboost.predict(X_train)
+print(evaluate(y_train, y_pred_xgboost))
+# %%
+y_pred_val_xgboost = model_xgboost.predict(X_val)
+print(evaluate(y_val, y_pred_val_xgboost)) 
+
