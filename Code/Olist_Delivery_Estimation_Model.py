@@ -271,10 +271,8 @@ offers.to_csv('app_offers.csv', index=False)
 # # ----------------------------------------------------------------------------------------------
 # # Base model and the forest tree model
 
-# X = df[['customer_state', 'seller_state', 'product_category_name_english',
-#         'freight_value', 'product_weight_g', 'vol', 'dist_km', 'quantity', 'same_state',
-#         'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng',
-#         'month', 'dow', 'day', 'hour']]
+# X = df[['customer_zip_code_prefix', 'freight_value','seller_state', 'customer_state' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 
+'same_state', 'vol', 'product_category_name_english', 'quantity' ,"month", "dow", "day", "hour"]]
 
 # y = df['delivery_days']
 
@@ -282,7 +280,7 @@ offers.to_csv('app_offers.csv', index=False)
 # X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
 
 # num_cols = ['freight_value', 'product_weight_g', 'vol', 'dist_km', 'quantity', 'same_state',
-#             'customer_lat', 'customer_lng', 'seller_lat', 'seller_lng',
+#             'customer_zip_code_prefix', 'seller_zip_code_prefix',
 #             'month', 'dow', 'day', 'hour']
 
 # cat_cols = ['customer_state', 'seller_state', 'product_category_name_english']
@@ -322,3 +320,35 @@ offers.to_csv('app_offers.csv', index=False)
 
 # y_pred = lr_pipe.predict(X_train);    print(evaluate(y_train, y_pred))
 # y_pred_val = lr_pipe.predict(X_val);  print(evaluate(y_val, y_pred_val))
+
+
+
+# %% models comparison
+# 1. the models to compare (each one is already a full pipeline)
+models = {
+    'LinearRegression': lr_pipe,
+    'HistGradientBoosting': model,
+    'RandomForest': rf_pipe,
+    # 'XGB': xgb_pipe,
+}
+
+# 2. train every model and record its train and test MAE
+rows = []
+for name, m in models.items():
+    pipe = clone(m)               # fresh copy, so the original object is left untouched
+    pipe.fit(X_train, y_train)
+    rows.append({
+        'Name': name,
+        'Train_MAE': mean_absolute_error(y_train, pipe.predict(X_train)),
+        'Test_MAE': mean_absolute_error(y_test, pipe.predict(X_test)),
+    })
+
+results = pd.DataFrame(rows).set_index('Name')
+print(results.round(2))
+
+# 3. the plot
+results.plot(kind='bar', figsize=(10, 8))
+plt.xticks(rotation=45)
+plt.ylabel('MAE (days)')
+plt.tight_layout()
+plt.show()
