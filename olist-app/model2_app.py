@@ -1,5 +1,5 @@
 import datetime
-import uuid
+import random
 from pathlib import Path
 import joblib
 import numpy as np
@@ -154,19 +154,17 @@ def checkout_step():
     st.radio("Payment method", ["Credit Card", "Debit Card", "Pay Pal"], horizontal=True)
 
     if nav_buttons("Place order", back_step=2):
-        cart['order_id'] = uuid.uuid4().hex[:8].upper()
+        cart['order_id'] = random.randint(100000, 999999)
         go_to_step(4)
 
 def confirmation_step():
     """Step 4: the order is placed."""
     seller = cart['seller']
-
     st.balloons()
     st.success(f"Your order #{cart['order_id']} has been placed")
     st.write(f"{cart['quantity']} item(s) from **{seller['seller_id_new']}** · "
              f"arrives by **{cart['arrival']}**")
     st.markdown("✅ Order placed → 🕒 Preparing → 🚚 Shipped → 📦 Delivered")
-
     if st.button("Start a new order", type="primary"):
         cart.clear()
         go_to_step(0)
