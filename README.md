@@ -119,7 +119,6 @@ Linear Regression underfits (high error on both sets) and Random Forest overfits
 
 **Recommendations**
 - Show the predicted delivery date at checkout, before "Order Now", to reduce cancellations and raise customer satisfaction.
-- Rank sellers by predicted delivery time, so customers can compare sellers for the same product.
 - Treat the estimate as a range of about ±[X] days rather than an exact promise, and monitor the real error after launch.
 
 ---
