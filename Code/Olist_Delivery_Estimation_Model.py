@@ -267,7 +267,7 @@ model = Pipeline([
 # # Base model and the forest tree model
 
 # X = df[['customer_zip_code_prefix', 'freight_value','seller_state', 'customer_state' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 
-'same_state', 'vol', 'product_category_name_english', 'quantity' ,"month", "dow", "day", "hour"]]
+# 'same_state', 'vol', 'product_category_name_english', 'quantity' ,"month", "dow", "day", "hour"]]
 
 # y = df['delivery_days']
 
