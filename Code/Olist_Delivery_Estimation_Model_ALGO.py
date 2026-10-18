@@ -129,8 +129,6 @@ df['log_vol'] = np.log1p(df['vol'])
 df['weight_x_dist'] = df['product_weight_g'] * df['dist_km']
 df['log_weight_dist'] = np.log1p(df['weight_x_dist'])
 
-# حساب تقريبي لأيام العمل الفعلي باستبعاد عطل نهاية الأسبوع من مدة الشحن
-df['estimated_work_days'] = df['delivery_days'] * (1 - (df['is_weekend'] * 0.28))
 
 # %% model features and split
 features = [
@@ -138,7 +136,7 @@ features = [
     'seller_zip_code_prefix', 'product_weight_g', 'dist_km', 'same_state', 
     'vol', 'product_category_name_english', 'quantity', 'month', 'dow', 'day', 
     'hour', 'is_weekend', 'weight_to_dist', 'log_dist', 'log_weight', 'log_vol',
-    'weight_x_dist', 'log_weight_dist', 'estimated_work_days'
+    'weight_x_dist', 'log_weight_dist'
 ]
 
 X = df[features]
