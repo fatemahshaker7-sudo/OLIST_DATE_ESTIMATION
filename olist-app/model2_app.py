@@ -20,7 +20,7 @@ def distance_km(customer, sellers):
 
 @st.cache_resource
 def load_model():
-    return joblib.load(BASE / 'delivery_model2.joblib')
+    return joblib.load(BASE / 'delivery_model.joblib')
 
 @st.cache_data
 def load_data():
