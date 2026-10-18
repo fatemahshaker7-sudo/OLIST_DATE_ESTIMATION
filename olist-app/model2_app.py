@@ -5,20 +5,22 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
+from geopy.distance import geodesic
 
 BASE = Path(__file__).parent
 STEPS = ["Location", "Shop", "Sellers", "Checkout", "Confirmation"]
 
 # functions needed
-def distance_km(lat1, lng1, lat2, lng2):
-    """Distance in km between two points on Earth (haversine formula)."""
-    lat1, lng1, lat2, lng2 = map(np.radians, [lat1, lng1, lat2, lng2])
-    a = np.sin((lat2 - lat1) / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin((lng2 - lng1) / 2) ** 2
-    return 2 * 6371 * np.arcsin(np.sqrt(a))
+def distance_km(customer, sellers):
+    """Distance in km from the customer to every seller (geodesic, same as in the training script)."""
+    customer_location = (customer['customer_lat'], customer['customer_lng'])
+    distances = [geodesic(customer_location, (lat, lng)).kilometers
+                 for lat, lng in zip(sellers['seller_lat'], sellers['seller_lng'])]
+    return pd.Series(distances, index=sellers.index)
 
 @st.cache_resource
 def load_model():
-    return joblib.load(BASE / 'delivery_model.joblib')
+    return joblib.load(BASE / 'delivery_model2.joblib')
 
 @st.cache_data
 def load_data():
@@ -31,14 +33,19 @@ def predict_delivery_days(sellers, zip_code, quantity):
     customer = customers.loc[zip_code]
     now = datetime.datetime.now()
 
+    # basic values reused by the engineered features (one value per seller)
+    dist_km = distance_km(customer, sellers)
+    weight = sellers['product_weight_g']
+    vol = sellers['vol']
+
     # the inputs the model was trained on (one row per seller)
     features = pd.DataFrame({
         # information about the seller
         'seller_state': sellers['seller_state'],
         'seller_zip_code_prefix': sellers['seller_zip_code_prefix'],
         'product_category_name_english': sellers['product_category_name_english'],
-        'product_weight_g': sellers['product_weight_g'],
-        'vol': sellers['vol'],
+        'product_weight_g': weight,
+        'vol': vol,
         'freight_value': sellers['freight_value'],  # used by the model only, never shown
 
         # information about the customer (the same for every seller)
@@ -46,7 +53,7 @@ def predict_delivery_days(sellers, zip_code, quantity):
         'customer_zip_code_prefix': zip_code,
 
         # information about the trip between them
-        'dist_km': distance_km(customer['customer_lat'], customer['customer_lng'], sellers['seller_lat'], sellers['seller_lng']),
+        'dist_km': dist_km,
         'same_state': (sellers['seller_state'] == customer['customer_state']).astype(int),
 
         # information about the order
@@ -54,9 +61,19 @@ def predict_delivery_days(sellers, zip_code, quantity):
         'month': now.month,
         'dow': now.weekday(),
         'day': now.day,
-        'hour': now.hour,})
+        'hour': now.hour,
 
-    features = features[list(model.feature_names_in_)]
+        # engineered features (same formulas as in the training script)
+        'is_weekend': int(now.weekday() >= 5),
+        'weight_to_dist': weight / (dist_km + 1),
+        'log_dist': np.log1p(dist_km),
+        'log_weight': np.log1p(weight),
+        'log_vol': np.log1p(vol),
+        'weight_x_dist': weight * dist_km,
+        'log_weight_dist': np.log1p(weight * dist_km),
+    })
+
+    features = features[FEATURES]
     return model.predict(features).round().astype(int)
 
 # this function reruns the page while saving the previous selections in streamlit memory
@@ -112,11 +129,13 @@ def sellers_step():
     low = sellers['price_min'].round().astype(int).astype(str)
     high = sellers['price_max'].round().astype(int).astype(str)
     sellers['price'] = np.where(low == high, low, low + ' - ' + high)
+
     # seller table and allow one selection only
     st.subheader(f"{len(sellers)} sellers for {cart['category']}")
     table = sellers[['seller_id_new', 'price', 'products', 'days', 'arrival']]
     table.columns = ['Seller', 'Price range (R$)', 'Products', 'Delivery (days)', 'Arrives by']
     event = st.dataframe(table, hide_index=True, on_select="rerun", selection_mode="single-row")
+
     # save the selection for the next step
     selected_rows = event.selection.rows
     seller = sellers.iloc[selected_rows[0]] if selected_rows else None
@@ -147,7 +166,7 @@ def checkout_step():
     st.write(f"Deliver to zip code {cart['zip_code']}, {cart['state']}")
     st.write(f"Estimated arrival: **{cart['arrival']}** (~{cart['days']} days)")
     total = seller['price_min'] * quantity
-    st.markdown(f"### Total R$ {total:,.2f}")
+    st.markdown(f"### Total from R$ {total:,.2f}")
     st.radio("Payment method", ["Credit Card", "Debit Card", "Pay Pal"], horizontal=True)
     if nav_buttons("Place order", back_step=2):
         cart['order_id'] = random.randint(100000, 999999)
@@ -158,7 +177,8 @@ def confirmation_step():
     seller = cart['seller']
     st.balloons()
     st.success(f"Your order #{cart['order_id']} has been placed")
-    st.write(f"{cart['quantity']} item(s) from **{seller['seller_id_new']}** · "f"arrives by **{cart['arrival']}**")
+    st.write(f"{cart['quantity']} item(s) from **{seller['seller_id_new']}** · "
+             f"arrives by **{cart['arrival']}**")
     st.markdown("✅ Order placed → 🕒 Preparing → 🚚 Shipped → 📦 Delivered")
     if st.button("Start a new order", type="primary"):
         cart.clear()
@@ -167,10 +187,18 @@ def confirmation_step():
 # Main app: load everything, draw the progress bar, run the current step
 model = load_model()
 customers, offers = load_data()
+
+# the saved model must be trained, and must only need columns the app can build
+if not hasattr(model, 'regressor_'):
+    st.error("The saved model has not been trained. Fit it, save it again and upload the new file.")
+    st.stop()
+
+FEATURES = list(model.regressor_.feature_names_in_)   # the columns the model was trained on
 st.session_state.setdefault('step', 0)           # the app starts from the first page
 cart = st.session_state.setdefault('cart', {})   # everything the customer chose so far
 step = st.session_state.step
 st.title("📦 Olist Smart Shop")
 st.progress((step + 1) / len(STEPS))
 st.caption(" › ".join(f"**{name}**" if i == step else name for i, name in enumerate(STEPS)))
+
 [location_step, shop_step, sellers_step, checkout_step, confirmation_step][step]()
