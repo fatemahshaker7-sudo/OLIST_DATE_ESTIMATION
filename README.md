@@ -17,7 +17,7 @@ We combined the 7 public Olist files into one table with one row per ordered ite
 
 The target is `delivery_days` (purchase date to delivery date) and the metric is **Mean Absolute Error (MAE)**: the average number of days the estimate is off, which matches how customers judge an early or late delivery. We compared five models on the same train/test split: Linear Regression, HistGradientBoosting, Random Forest, XGBoost and a **Stacking ensemble** (we also tried KNN, which performed poorly). Linear Regression scored about 5.4 days of MAE and underfits. Random Forest fits the training data very closely (about 1.8 days) but drops to about 4.7 days on unseen data, which is a clear sign of overfitting. The tuned HistGradientBoosting model reached about 4.6 days on unseen orders.
 
-**We chose the Stacking model for the Streamlit app.** It combines three tree-based models (HistGradientBoosting, Random Forest and Extra Trees) and lets a Ridge regression learn how to weigh their predictions. The target is log-transformed during training (`log1p`) to handle the skewed delivery times, and the predictions are converted back to days. On unseen orders it reached an **MAE of [0.02] days** (train MAE [0.01] days), compared with [4.58] days for XGBoost, about 4.6 days for HistGradientBoosting and about 5.4 days for the Linear Regression baseline.
+**We chose the Stacking model for the Streamlit app.** It combines three tree-based models (HistGradientBoosting, Random Forest and Extra Trees) and lets a Ridge regression learn how to weigh their predictions. The target is log-transformed during training (`log1p`) to handle the skewed delivery times, and the predictions are converted back to days. On unseen orders it reached an **MAE of 4.39 days** (train MAE 3.67 days), compared with [4.58] days for XGBoost, about 4.6 days for HistGradientBoosting and about 5.4 days for the Linear Regression baseline.
 
 The strongest signals in the data match common sense. Distance and delivery time are correlated (0.39), only 36% of orders have the customer and seller in the same state, and freight value tracks product weight and volume (about 0.60). We recommend showing the model's estimate at checkout to reduce cancellations (our business target is 12%) and to improve customer satisfaction. We deployed the Stacking model in a Streamlit app that simulates the customer journey: location, product, sellers ranked by predicted delivery time, checkout and confirmation.
 
@@ -89,7 +89,7 @@ OLIST_DATE_ESTIMATION/
 
 **Comparison models (Linear Regression, HistGradientBoosting, Random Forest, XGBoost), 15 features:** `customer_zip_code_prefix`, `freight_value`, `seller_state`, `customer_state`, `seller_zip_code_prefix`, `product_weight_g`, `dist_km`, `same_state`, `vol`, `product_category_name_english`, `quantity`, `month`, `dow`, `day`, `hour`
 
-**Stacking model (used in the app):** [paste the output of `list(X_N_train.columns)`]. The three categorical features (`customer_state`, `seller_state`, `product_category_name_english`) are ordinal-encoded, and the target is transformed with `log1p`.
+**Stacking model (used in the app):** 'customer_zip_code_prefix', 'freight_value', 'seller_state', 'customer_state', 'seller_zip_code_prefix', 'product_weight_g', 'dist_km', 'same_state', 'vol', 'product_category_name_english', 'quantity', 'month', 'dow', 'day', 'hour', 'is_weekend', 'weight_to_dist', 'log_dist', 'log_weight', 'log_vol','weight_x_dist', 'log_weight_dist'. The three categorical features (`customer_state`, `seller_state`, `product_category_name_english`) are ordinal-encoded, and the target is transformed with `log1p`.
 
 ### App files
 
@@ -106,14 +106,14 @@ OLIST_DATE_ESTIMATION/
 
 ![Model MAE comparison](Presentation/images/model_mae_comparison.png)
 
-Linear Regression underfits (high error on both sets) and Random Forest overfits (a large gap between train and test). The Stacking model, the one we deployed, combines HistGradientBoosting, Random Forest and Extra Trees and reached a test MAE of [0.02] days.
+Linear Regression underfits (high error on both sets) and Random Forest overfits (a large gap between train and test). The Stacking model, the one we deployed, combines HistGradientBoosting, Random Forest and Extra Trees and reached a test MAE of 4.39 days.
 
 ---
 
 ## Conclusions and Recommendations
 
 **Conclusions**
-- We chose the **Stacking model** (HistGradientBoosting + Random Forest + Extra Trees, combined by a Ridge model, with a log-transformed target) for the app. It predicts delivery time with an MAE of **[0.02] days** on unseen orders, compared with about 5.4 days for the Linear Regression baseline.
+- We chose the **Stacking model** (HistGradientBoosting + Random Forest + Extra Trees, combined by a Ridge model, with a log-transformed target) for the app. It predicts delivery time with an MAE of **4.39 days** on unseen orders, compared with about 5.4 days for the Linear Regression baseline.
 - Location drives delivery time: distance and delivery days are correlated (0.39), and only 36% of orders stay inside one state.
 - Random Forest alone looked best on training data but did not generalize, so the train/test gap, not the training score, guided our choices.
 
