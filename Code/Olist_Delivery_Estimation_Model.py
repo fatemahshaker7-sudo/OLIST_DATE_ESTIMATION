@@ -18,6 +18,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBRegressor
 from sklearn.base import clone
+from sklearn.linear_model import RidgeCV ,Ridge
+from geopy.distance import geodesic
 
 
 # %% reading nessesary files 
@@ -137,6 +139,17 @@ df['same_state']
 # Volume = length x height x width
 df['vol'] = df['product_length_cm'] * df['product_height_cm'] * df['product_width_cm']
 df[['product_length_cm', 'product_height_cm', 'product_width_cm', 'vol']]
+
+# %% another calculation for distance
+def calculate_geodesic(row):
+    if pd.isna(row['customer_lat']) or pd.isna(row['seller_lat']) or pd.isna(row['customer_lng']) or pd.isna(row['seller_lng']):
+        return np.nan
+    cust_loc = (row['customer_lat'], row['customer_lng'])
+    sell_loc = (row['seller_lat'], row['seller_lng'])
+    return geodesic(cust_loc, sell_loc).kilometers
+
+df['dist_km'] = df.apply(calculate_geodesic, axis=1)
+
 # %% 
 df.columns
 
@@ -212,6 +225,22 @@ df["month"] = df["order_purchase_timestamp"].dt.month
 df["dow"]   = df["order_purchase_timestamp"].dt.dayofweek
 df["day"] = df["order_purchase_timestamp"].dt.day
 df["hour"]  = df["order_purchase_timestamp"].dt.hour
+
+# %%
+# %% Advanced Feature Engineering & Business Days Calculation
+df['is_weekend'] = df['dow'].apply(lambda x: 1 if x >= 5 else 0)
+df['weight_to_dist'] = df['product_weight_g'] / (df['dist_km'] + 1)
+
+df['log_dist'] = np.log1p(df['dist_km'])
+df['log_weight'] = np.log1p(df['product_weight_g'])
+df['log_vol'] = np.log1p(df['vol'])
+
+df['weight_x_dist'] = df['product_weight_g'] * df['dist_km']
+df['log_weight_dist'] = np.log1p(df['weight_x_dist'])
+
+# حساب تقريبي لأيام العمل الفعلي باستبعاد عطل نهاية الأسبوع من مدة الشحن
+df['estimated_work_days'] = df['delivery_days'] * (1 - (df['is_weekend'] * 0.28))
+
 # %% model features and split
 
 X = df[[ 'customer_zip_code_prefix', 'freight_value','seller_state', 'customer_state' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'product_category_name_english', 'quantity' ,"month", "dow", "day", "hour"]]
@@ -225,51 +254,14 @@ X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test
 
 preprocess = ColumnTransformer(
     [('cat', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=np.nan), ['customer_state', 'seller_state', 'product_category_name_english'])],
-    remainder='passthrough'
-)
+    remainder='passthrough')
 
 model = Pipeline([
     ('prep', preprocess),
     ('hgb', HistGradientBoostingRegressor( l2_regularization=5.91, max_depth=12, min_samples_leaf=71,  learning_rate=0.05, max_iter=200, max_leaf_nodes=95, max_features=0.7,
         categorical_features=[True] * len(['customer_state', 'seller_state', 'product_category_name_english']) 
         + [False] * len([ 'customer_zip_code_prefix', 'freight_value' , 'seller_zip_code_prefix', 'product_weight_g','dist_km', 'same_state', 'vol', 'quantity',"month", "dow", "day", "hour"]),
-        random_state=42
-    ))
-])
-
-# %% training and predicting
-model.fit(X_train, y_train)
-y_pred = model.predict(X_train)
-print(evaluate(y_train, y_pred))
-# %%
-y_pred_val = model.predict(X_val)
-print(evaluate(y_val, y_pred_val)) 
-
-# %% saving the model
-joblib.dump(model, 'delivery_model.joblib')   # or `stack`, whichever model you pick
-columns = list(model.feature_names_in_)
-columns
-
-# %%
-df = pd.read_csv('olist_clean.csv')
-
-customers = df.drop_duplicates('customer_zip_code_prefix').set_index('customer_zip_code_prefix')
-customers = customers[['customer_state', 'customer_lat', 'customer_lng']].dropna()
-customers.to_csv('app_customers.csv')
-
-offers = df.groupby(['product_category_name_english', 'seller_id_new']).agg(
-    seller_state=('seller_state', 'first'),
-    seller_zip_code_prefix=('seller_zip_code_prefix', 'first'),
-    seller_lat=('seller_lat', 'first'),
-    seller_lng=('seller_lng', 'first'),
-    price_min=('price', 'min'),
-    price_max=('price', 'max'),
-    products=('product_id', 'nunique'),
-    freight_value=('freight_value', 'median'),
-    product_weight_g=('product_weight_g', 'median'),
-    vol=('vol', 'median'),
-).reset_index().dropna(subset=['seller_lat', 'seller_lng'])
-offers.to_csv('app_offers.csv', index=False)
+        random_state=42))])
 
 # # ----------------------------------------------------------------------------------------------
 # # Base model and the forest tree model
@@ -294,10 +286,8 @@ offers.to_csv('app_offers.csv', index=False)
 
 # preprocessing_pipe = ColumnTransformer([
 #     ('num', num_pipe, num_cols),
-#     ('cat', cat_pipe, cat_cols),
-# ])
+#     ('cat', cat_pipe, cat_cols),])
 # preprocessing_pipe
-
 # rf_pipe = make_pipeline(preprocessing_pipe, RandomForestRegressor(random_state=42))
 
 # #stepname__param
@@ -313,66 +303,123 @@ offers.to_csv('app_offers.csv', index=False)
 # y_pred = best_pipe.predict(X_train);    evaluate(y_train, y_pred)
 # y_pred_val = best_pipe.predict(X_val);  evaluate(y_val, y_pred_val)
 
-# y_pred_test = best_pipe.predict(X_test)
-# evaluate(y_test, y_pred_test)
-
 # # This is the base model
 
 # lr_pipe = make_pipeline(preprocessing_pipe, LinearRegression())
 # lr_pipe.fit(X_train, y_train)
 
-# y_pred = lr_pipe.predict(X_train);    print(evaluate(y_train, y_pred))
-# y_pred_val = lr_pipe.predict(X_val);  print(evaluate(y_val, y_pred_val))
-
-
-
-# %% models comparison
-# 1. the models to compare (each one is already a full pipeline)
-models = {
-    'LinearRegression': lr_pipe,
-    'HistGradientBoosting': model,
-    'RandomForest': rf_pipe,
-    'XGBoost': model_xgboost,
-}
-
-# 2. train every model and record its train and test MAE
-rows = []
-for name, m in models.items():
-    pipe = clone(m)               # fresh copy, so the original object is left untouched
-    pipe.fit(X_train, y_train)
-    rows.append({
-        'Name': name,
-        'Train_MAE': mean_absolute_error(y_train, pipe.predict(X_train)),
-        'Test_MAE': mean_absolute_error(y_test, pipe.predict(X_test)),
-    })
-
-results = pd.DataFrame(rows).set_index('Name')
-print(results.round(2))
-
-# 3. the plot
-results.plot(kind='bar', figsize=(10, 8))
-plt.xticks(rotation=45)
-plt.ylabel('MAE (days)')
-plt.tight_layout()
-plt.show()
-
-
-# %% XGBoost Model 
+# %% XGBoost Model (Fatema M part)
 model_xgboost = Pipeline([
     ('prep', preprocess),
      ('xgb', XGBRegressor( n_estimators=500, learning_rate=0.05, max_depth=6, subsample=0.8, colsample_bytree=0.8,
-        tree_method='hist', random_state=42,
-    ))
-])
+        tree_method='hist', random_state=42,))])
 
 model_xgboost
 
-# %% Fit XGBoost Model and Predict
-model_xgboost.fit(X_train, y_train)
-y_pred_xgboost = model_xgboost.predict(X_train)
-print(evaluate(y_train, y_pred_xgboost))
-# %%
-y_pred_val_xgboost = model_xgboost.predict(X_val)
-print(evaluate(y_val, y_pred_val_xgboost)) 
-# %%
+# %% model features and split for stacking (Nebras part)
+features = [
+    'customer_zip_code_prefix', 'freight_value', 'seller_state', 'customer_state', 
+    'seller_zip_code_prefix', 'product_weight_g', 'dist_km', 'same_state', 
+    'vol', 'product_category_name_english', 'quantity', 'month', 'dow', 'day', 
+    'hour', 'is_weekend', 'weight_to_dist', 'log_dist', 'log_weight', 'log_vol',
+    'weight_x_dist', 'log_weight_dist', 'estimated_work_days']
 
+X_N = df[features]
+y_N = df['delivery_days']
+
+X_N_train_val, X_N_test, y_N_train_val, y_N_test = train_test_split(X_N, y_N, test_size=0.2, random_state=42)
+X_N_train, X_N_val, y_N_train, y_N_val = train_test_split(X_N_train_val, y_N_train_val, test_size=0.2, random_state=42)
+
+# %%
+# Ultimate Stacking Model (3 Power Models + Ridge Final Estimator)
+categorical_cols = ['customer_state', 'seller_state', 'product_category_name_english']
+numerical_cols = [f for f in features if f not in categorical_cols]
+
+preprocess = ColumnTransformer(
+    [('cat', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=np.nan), categorical_cols)],
+    remainder='passthrough')
+
+# دمج 3 نماذج عملاقة لتقليل الخطأ تماماً
+estimators = [
+    ('hgb', HistGradientBoostingRegressor(
+        loss='absolute_error',
+        l2_regularization=3.0, max_depth=12, min_samples_leaf=25,  
+        learning_rate=0.04, max_iter=350, max_features=0.85,
+        random_state=42)),
+    ('rf', RandomForestRegressor(
+        n_estimators=100, max_depth=16, min_samples_split=5, 
+        random_state=42, n_jobs=-1)),
+    ('et', ExtraTreesRegressor(
+        n_estimators=120, max_depth=16, min_samples_split=5, 
+        random_state=42, n_jobs=-1))]
+
+base_stack = Pipeline([
+    ('prep', preprocess),
+    ('stacking', StackingRegressor(estimators=estimators, final_estimator=Ridge(alpha=1.0), n_jobs=-1))])
+
+model_N = TransformedTargetRegressor(
+    regressor=base_stack,
+    func=np.log1p,
+    inverse_func=np.expm1)
+
+# %% New model comparision
+models = {
+    # name: (pipeline, X_train, y_train, X_test, y_test)
+    'LinearRegression':     (lr_pipe, X_train,   y_train,   X_test,   y_test),
+    'HistGradientBoosting': (model,   X_train,   y_train,   X_test,   y_test),
+    'RandomForest':         (rf_pipe, X_train,   y_train,   X_test,   y_test),
+    'XGBRegressor':         (model_xgboost, X_train,   y_train,   X_test,   y_test),
+    'Stacking':             (model_N,   X_N_train, y_N_train, X_N_test, y_N_test),}
+
+rows = []
+for name, (m, Xtr, ytr, Xte, yte) in models.items():
+    pipe = clone(m)                      # fresh copy, original object untouched
+    pipe.fit(Xtr, ytr)
+    rows.append({
+        'Name': name,
+        'Train_MAE': mean_absolute_error(ytr, pipe.predict(Xtr)),
+        'Test_MAE': mean_absolute_error(yte, pipe.predict(Xte)),})
+
+results = pd.DataFrame(rows).set_index('Name')
+print(results.round(2))
+ax = results.plot(kind='bar', figsize=(10, 8))
+
+# numbers above the bars
+for container in ax.containers:
+    ax.bar_label(container, fmt='%.2f', fontsize=12, padding=3)
+
+# remove the y axis and the top, left and right lines
+ax.yaxis.set_visible(False)
+for side in ['top', 'left', 'right']:
+    ax.spines[side].set_visible(False)
+ax.set_xlabel('')                      
+plt.xticks(rotation=45, fontsize=14)
+ax.legend(fontsize=12, frameon=False)
+plt.tight_layout()
+plt.savefig('model_mae_comparison.png', transparent=True, dpi=300, bbox_inches='tight')
+plt.show()
+
+# %% saving the best model (model_N)
+joblib.dump(model_N, 'delivery_model.joblib')   # or `stack`, whichever model you pick
+columns = list(model_N.feature_names_in_)
+columns
+
+# %%
+df = pd.read_csv('olist_clean.csv')
+
+customers = df.drop_duplicates('customer_zip_code_prefix').set_index('customer_zip_code_prefix')
+customers = customers[['customer_state', 'customer_lat', 'customer_lng']].dropna()
+customers.to_csv('app_customers.csv')
+
+offers = df.groupby(['product_category_name_english', 'seller_id_new']).agg(
+    seller_state=('seller_state', 'first'),
+    seller_zip_code_prefix=('seller_zip_code_prefix', 'first'),
+    seller_lat=('seller_lat', 'first'),
+    seller_lng=('seller_lng', 'first'),
+    price_min=('price', 'min'),
+    price_max=('price', 'max'),
+    products=('product_id', 'nunique'),
+    freight_value=('freight_value', 'median'),
+    product_weight_g=('product_weight_g', 'median'),
+    vol=('vol', 'median'),).reset_index().dropna(subset=['seller_lat', 'seller_lng'])
+offers.to_csv('app_offers.csv', index=False)
