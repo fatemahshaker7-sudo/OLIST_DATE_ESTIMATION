@@ -104,7 +104,7 @@ OLIST_DATE_ESTIMATION/
 
 **Model comparison (MAE in days, train vs. test):**
 
-![Model MAE comparison](Presentation/images/model_mae_comparison.png)
+![Model MAE comparison](Presentation/images/model_mae_comparison1.png)
 
 Linear Regression underfits (high error on both sets) and Random Forest overfits (a large gap between train and test). The Stacking model, the one we deployed, combines HistGradientBoosting, Random Forest and Extra Trees and reached a test MAE of 4.39 days.
 
