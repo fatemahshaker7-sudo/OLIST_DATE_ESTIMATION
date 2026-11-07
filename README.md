@@ -139,3 +139,8 @@ Linear Regression underfits (high error on both sets) and Random Forest overfits
 - Olist, [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce), Kaggle (CC BY-NC-SA 4.0).
 - scikit-learn documentation: [StackingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.StackingRegressor.html), [TransformedTargetRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.compose.TransformedTargetRegressor.html), [HistGradientBoostingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html), [RandomizedSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.RandomizedSearchCV.html), [GridSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html).
 - [Streamlit documentation](https://docs.streamlit.io) and [Streamlit Community Cloud](https://streamlit.io/cloud).
+
+## Acknowledgments
+
+Thanks to  Nebras Jafail · Fatema Shaker · Fatema Butaher · Noora Alkhalaqi for their work on [data analysis / modeling / the presentation / app], and to GA-DSB3 Instructors for guidance throughout the project. 
+[![Contributors](https://contrib.rocks/image?repo=fatemahshaker7-sudo/OLIST_DATE_ESTIMATION)](https://github.com/fatemahshaker7-sudo/OLIST_DATE_ESTIMATION/graphs/contributors)
