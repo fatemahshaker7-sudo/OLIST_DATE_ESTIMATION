@@ -1,7 +1,5 @@
 # 📦 Olist Delivery Time Estimation
 
-**Team:** Nebras Jafail · Fatema Shaker · Fatema Butaher · Noora Alkhalaqi (DSB3)
-
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Live%20App-FF4B4B?logo=streamlit&logoColor=white)](https://olist-delivery-estimation-app.streamlit.app)
 
 [![View Presentation](https://img.shields.io/badge/View-PowerPoint-D24726?logo=microsoftpowerpoint&logoColor=white)](https://view.officeapps.live.com/op/view.aspx?src=https://raw.githubusercontent.com/fatemahshaker7-sudo/OLIST_DATE_ESTIMATION/main/Presentation/Olist_delivery_model.pptx)
